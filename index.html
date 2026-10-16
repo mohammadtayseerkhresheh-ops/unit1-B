@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الامتحان الأول - المعلم محمد تيسير الخرشة</title>
+    <!-- تضمين مكتبات Firebase للربط بقاعدة البيانات -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary-color: #1a5276;
+            --secondary-color: #2980b9;
+            --bg-color: #f4f6f7;
+            --card-bg: #ffffff;
+            --text-color: #2c3e50;
+            --accent-color: #27ae60;
+            --danger-color: #c0392b;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+        h1, h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        p.teacher-name {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--secondary-color);
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: var(--secondary-color);
+        }
+        .btn {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: var(--primary-color);
+        }
+        .btn-secondary {
+            background-color: #7f8c8d;
+        }
+        .btn-secondary:hover {
+            background-color: #626567;
+        }
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .reading-passage {
+            background: #eaf2f8;
+            border-right: 5px solid var(--secondary-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .options-list {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+        .options-list li {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .options-list li:hover {
+            background: #e8f4f8;
+            border-color: var(--secondary-color);
+        }
+        .options-list li.selected {
+            background: #d4efdf;
+            border-color: var(--accent-color);
+            font-weight: bold;
+        }
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .quiz-footer button {
+            width: 48%;
+        }
+        .underline-bold {
+            text-decoration: underline;
+            font-weight: bold;
+            color: var(--danger-color);
+        }
+        /* لوحة المعلم */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .alert-box {
+            background-color: #f9e79f;
+            color: #7d6608;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- شاشة الترحيب (الغلاف) -->
+    <div id="welcome-screen" class="screen active">
+        <h1>الامتحان الأول</h1>
+        <p class="teacher-name">إعداد المعلم: محمد تيسير الخرشة</p>
+        
+        <div id="cheating-alert" class="alert-box">تنبيه: محاولة مغادرة صفحة الامتحان أو التبويب ستُحتسب مخالفة!</div>
+
+        <div class="form-group">
+            <label for="student-name">أدخل اسمك الثلاثي الكامل للبدء:</label>
+            <input type="text" id="student-name" placeholder="الاسم الكامل...">
+        </div>
+        <button class="btn" onclick="startQuiz()">ابدأ الامتحان</button>
+        <hr style="margin: 25px 0; border:0; border-top: 1px solid #ddd;">
+        <button class="btn btn-secondary" onclick="showLoginModal()">لوحة المعلم</button>
+    </div>
+
+    <!-- شاشة تسجيل دخول المعلم -->
+    <div id="login-screen" class="screen">
+        <h2>تسجيل دخول المعلم</h2>
+        <div class="form-group">
+            <label for="admin-pass">كلمة المرور المشفرة:</label>
+            <input type="password" id="admin-pass" placeholder="أدخل كلمة المرور...">
+        </div>
+        <button class="btn" onclick="verifyAdmin()">دخول لوحة التحكم</button>
+        <button class="btn btn-secondary" onclick="showScreen('welcome-screen')" style="margin-top: 10px;">رجوع</button>
+    </div>
+
+    <!-- لوحة نتائج المعلم -->
+    <div id="admin-dashboard" class="screen">
+        <h2>لوحة نتائج الطلاب</h2>
+        <div style="max-height: 350px; overflow-y: auto;">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>اسم الطالب</th>
+                        <th>الدرجة (من 100)</th>
+                        <th>التاريخ والوقت</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody">
+                    <!-- يتم تعبئتها ديناميكياً -->
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-secondary" onclick="showScreen('welcome-screen')" style="margin-top: 20px;">العودة للرئيسية</button>
+    </div>
+
+    <!-- شاشة الامتحان التفاعلي -->
+    <div id="quiz-screen" class="screen">
+        <div class="quiz-header">
+            <span id="question-counter">السؤال 1 من 44</span>
+            <span id="timer-display">اللغة الإنجليزية - الصف الأول الثانوي</span>
+        </div>
+
+        <div id="passage-container"></div>
+        <div id="question-container"></div>
+        <ul id="options-container" class="options-list"></ul>
+
+        <div class="quiz-footer">
+            <button class="btn btn-secondary" id="prev-btn" onclick="prevQuestion()">السؤال السابق</button>
+            <button class="btn" id="next-btn" onclick="nextQuestion()">السؤال التالي</button>
+        </div>
+    </div>
+
+    <!-- شاشة النتيجة النهائية -->
+    <div id="result-screen" class="screen">
+        <h2>نتيجة الامتحان النهائي</h2>
+        <div style="text-align: center; margin: 30px 0;">
+            فلسفة الدرجة: <h1 id="final-score" style="font-size: 3rem; color: var(--accent-color);">0</h1> من 100
+        </div>
+        <h3>التغذية الراجعة وتصحيح الإجابات:</h3>
+        <div id="feedback-container" style="max-height: 300px; overflow-y: auto; text-align: right; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;"></div>
+        <button class="btn" onclick="location.reload()" style="margin-top: 20px;">إعادة الامتحان</button>
+    </div>
+</div>
+
+<script>
+    // إعدادات Firebase (قم بوضع بيانات مشروعك الفعلي هنا للربط المباشر)
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_AUTH_DOMAIN",
+        databaseURL: "YOUR_DATABASE_URL",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_STORAGE_BUCKET",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    
+    // محاولة تهيئة الفايربيس (تأكد من تفعيل قواعد البيانات لديك)
+    try {
+        firebase.initializeApp(firebaseConfig);
+        var database = firebase.database();
+    } catch (e) {
+        console.log("Firebase not configured fully, running local storage simulation mode.");
+    }
+
+    // بنك الأسئلة الشامل (مستخرج حرفياً من ملف المنهاج المرفق)
+    const rawQuestions = [
+        // أسئلة الخيارات المتعددة العامة
+        { q: "I can't believe we ___________touch after being such good friends at school.", options: ["made", "lost", "stayed", "kept"], answer: 1 },
+        { q: "Could you………………………. to Ayham that I'll be ten minutes late?", options: ["spread the message", "pass on the message", "deliver the message", "send the message"], answer: 1 },
+        { q: "………………………………..in contact was much easier than it had ever been.", options: ["maintaining", "pass on", "staying", "spread"], answer: 0 },
+        { q: "The phone_________ all the time now that we run a business.", options: ["is ringing", "ring", "rings", "has rung"], answer: 2 },
+        { q: "Young people _________ by hand less often these days.", options: ["are writing", "writes", "wrote", "written"], answer: 0 },
+        { q: "I______________________ Malek a couple of times today.", options: ["have called", "am calling", "have call", "called"], answer: 0 },
+        { q: "I established contact with Mr Farley earlier today, but he_______ yet.", options: ["has respond", "hasn’t responds", "hasn’t responded", "doesn’t respond"], answer: 2 },
+        { q: "Since the dawn of time, people______different ways of communicating at a distance.", options: ["has been using", "have been using", "has been used", "have been used"], answer: 1 },
+        { q: "Do you know that man? He ______________________ at you all evening.", options: ["has been looked", "have been looking", "has been looking", "has looking"], answer: 2 },
+        { q: "In ancient times, they_____________ more ingenious methods of delivering messages; for example, sending a message in a bottle.", options: ["invent", "invented", "had invented", "were inventing"], answer: 1 },
+        { q: "I __ __________ a film when the lights suddenly went out.", options: ["was watching", "are watching", "were watching", "watched"], answer: 0 },
+        { q: "Before Rashid met his wife, he __ ____ single for a decade.", options: ["has been", "had been", "have been", "were"], answer: 1 },
+        { q: "____________________ , Sara writes a new story to her best friend .", options: ["All the morning", "Ever since", "Once in a while", "When"], answer: 2 },
+        { q: "He has been writing thank-you letters ____________________.", options: ["all the morning", "ever since", "once in a while", "when"], answer: 0 },
+        { q: "The researchers had never understood the ancient text before that incredible day. The underlined words in the sentence above are used to describe………", options: ["routines and habits/things that happen repeatedly.", "actions and states which began in the past and continue until now.", "situations which are changing during the present time.", "an action in the past that was completed before another action or time in the past ."], answer: 3 },
+        { q: "We have been learning about ancient methods of communication at school recently. The underlined words in the sentence above are used to describe………", options: ["an action in progress or repeated over a period of time up until now.", "Finished past actions with a present result .", "actions that started and finished at a specific time in the past", "a long activity interrupted by a short one."], answer: 0 },
+        { q: "Rana has drawn my attention to a problem. The underlined word ( phrase ) can be replaced with…………………………..", options: ["picked up", "pointed out", "made out", "brought about"], answer: 1 },
+        { q: "-You don’t understand ? Do I have to…………………. what I mean?", options: ["get across", "bring about", "come across", "spell out"], answer: 3 },
+        { q: "- It was cloudy, but he could still……………….. the distant star.", options: ["Pick up", "bring about", "make out", "wipe out"], answer: 2 },
+        { q: "- I couldn’t process so much information. The underlined verb ( phrase ) can be replaced with …………………………………", options: ["get across", "point out", "make out", "take in"], answer: 3 },
+        { q: "”to successfully communicate a message/ an idea”, means_____________", options: ["get across", "take in", "figure out", "come across"], answer: 0 },
+        { q: "A:When Grandad was a child , they didn’t have computers. B:…………………? I can’t imagine a world like that! How did they find information?", options: ["wasn’t he", "was he", "didn’t they", "didn’t he"], answer: 2 },
+        { q: "She usually comes in late ,________________ ?", options: ["is she", "she is", "does she", "doesn’t she"], answer: 3 },
+        { q: "Nothing has happened so far, … ?", options: ["hasn’t it", "has it", "does it", "doesn’t it"], answer: 1 },
+        { q: "Nobody gave you the message, ............. ?", options: ["did they", "did he", "didn’t he", "didn’t they"], answer: 0 },
+        { q: "Let’s go to the party, ……… ?", options: ["will we", "shall we", "won’t you", "do you"], answer: 1 },
+        { q: "I’m having lunch with them,............ ?", options: ["am I", "are you", "aren’t you", "aren’t I"], answer: 3 },
+        { q: "Come to visit us next summer, … ?", options: ["shall I", "can’t you", "won’t you", "could you"], answer: 2 },
+        { q: "The room looks different . Someone has moved the sofa,………….?", options: ["haven’t they", "hasn’t it", "doesn’t it", "have they"], answer: 0 },
+        { q: "A- I ___________to live in Aqaba. B -Did you? I bet is was amazing", options: ["was used", "use", "used", "didn’t use"], answer: 2 },
+        { q: "Kareem was thrilled when he found out he'd got a place at university. - The adjective that replaces the underlined word is:", options: ["terrified", "ecstatic", "tense", "devastated"], answer: 1 },
+        { q: "Passengers were left confused after the departure gate was changed seven times. - The Synonym that replaces the underlined word is:", options: ["ecstatic", "livid", "exasperated", "bewildered"], answer: 3 },
+        { q: "The sentence “He is driving me up the wall!” illustrates: _______", options: ["annoyance", "sadness", "happiness", "relief"], answer: 0 },
+        { q: "The phrase “That’s a weight off my mind.” expresses: _______", options: ["relief", "anxiety", "frustration", "disbelief"], answer: 0 },
+        { q: "The phrase that conveys a sense of anxiety is:………………..", options: ["I've had it up to here with", "I’m feeling a bit blue", "I’m worried sick about", "I'm feeling a bit down in the dumbs"], answer: 2 },
+        { q: "When I commented on the kind of music Caroline likes, she jumped down my………...", options: ["back", "throat", "mouth", "spot"], answer: 1 },
+        { q: "In a conversation, don’t just _____ questions at someone. Wait for an answer and listen!", options: ["shoot", "make", "catch", "fire"], answer: 3 },
+
+        // أسئلة القطعة (تتضمن النص المرجعي أمام الأسئلة)
+        {
+            passage: "As a child, Jane loved reading books about a fictional character called Dr Dolittle, who could talk to animals. Perhaps this is what inspired her to go to Africa when she was in her 20s. Here she came across a scientist who asked Jane if she might want a job observing chimpanzees in the wild. She immediately said yes. She went with her mother to the shores of Lake Tanganyika in Tanzania to start her new job, and it was not long before she made out a group of chimpanzees in the trees around an area now called the Gombe Stream National Park. At first, the animals ran away as soon as they saw her. But maybe because she knew very little about these wild animals, <span class=\"underline-bold\">it</span> is highly likely that her calmness gained their trust.",
+            q: "What did Jane discover about the diet of chimpanzees?",
+            options: ["They are exclusively vegetarian.", "They are omnivores.", "They eat only fruits and ants.", "They rely entirely on plants."],
+            answer: 1
+        },
+        {
+            passage: "As a child, Jane loved reading books about a fictional character called Dr Dolittle, who could talk to animals. Perhaps this is what inspired her to go to Africa when she was in her 20s. Here she came across a scientist who asked Jane if she might want a job observing chimpanzees in the wild. She immediately said yes. She went with her mother to the shores of Lake Tanganyika in Tanzania to start her new job, and it was not long before she made out a group of chimpanzees in the trees around an area now called the Gombe Stream National Park.",
+            q: "Mention two methods of communication between chimpanzees.",
+            options: ["Touch and sound", "Writing and reading", "Body language and colors", "Sign language and speech"],
+            answer: 0
+        },
+        {
+            passage: "As a child, Jane loved reading books about a fictional character called Dr Dolittle, who could talk to animals. Perhaps this is what inspired her to go to Africa when she was in her 20s. Here she came across a scientist who asked Jane if she might want a job observing chimpanzees in the wild. She immediately said yes.",
+            q: "Who did Jane meet when she arrived in Africa, and what job did they offer her?",
+            options: ["A teacher who offered her a job writing books.", "A scientist who offered her a job observing chimpanzees in the wild.", "A UN messenger who offered her a peace mission.", "A local guide who offered her a tour."],
+            answer: 1
+        },
+        {
+            passage: "At this time, people believed that only humans could use tools, but Jane watched chimpanzees using sticks to take ants from a tree, and then used the sticks to feed the ants to their young. Through her work, Jane spelled out to the scientific community for the first time that animals, too, could use tools.",
+            q: "What surprising behavior did Jane observe in chimpanzees that changed people's beliefs about animals?",
+            options: ["They could talk fluently.", "They could use tools like sticks to take ants.", "They built permanent houses.", "They cooked their food."],
+            answer: 1
+        },
+        {
+            passage: "As a child, Jane loved reading books about a fictional character called Dr Dolittle... She went with her mother to the shores of Lake Tanganyika in Tanzania to start her new job, and it was not long before she made out a group of chimpanzees in the trees around an area now called the Gombe Stream National Park.",
+            q: "Find a word in the text which means (group that competes with others):",
+            options: ["rival group", "fictional character", "scientific community", "omnivores"],
+            answer: 0
+        },
+        {
+            passage: "At first, the animals ran away as soon as they saw her. But maybe because she knew very little about these wild animals, it is highly likely that her calmness gained <span class=\"underline-bold\">their</span> trust.",
+            q: "What does the underlined pronoun (<span class=\"underline-bold\">their</span>) refer to?",
+            options: ["Jane and her mother", "Wild chimpanzees", "Scientists", "Local people"],
+            answer: 1
+        },
+        {
+            passage: "At first, the animals ran away... She saw that different groups of chimpanzees had battles in which they tried to wipe out the rival group.",
+            q: "Choose the sentence that shows chimpanzees can be dangerous:",
+            options: ["Jane loved reading books about Dr Dolittle.", "She went with her mother to the shores of Lake Tanganyika.", "She saw that different groups of chimpanzees had battles in which they tried to wipe out the rival group.", "In 2002, she became a UN Messenger for peace."],
+            answer: 2
+        }
+    ];
+
+    let studentName = "";
+    let currentQuestionIndex = 0;
+    let questions = [];
+    let userAnswers = {};
+
+    // خربطة (تفرياد) الأسئلة عشوائياً
+    function shuffleArray(array) {
+        let currentIndex = array.length, temporaryValue, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+            temporaryValue = array[currentIndex];
+            array[currentIndex] = array[randomIndex];
+            array[randomIndex] = temporaryValue;
+        }
+        return array;
+    }
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    function startQuiz() {
+        const nameInput = document.getElementById('student-name').value.trim();
+        if (!nameInput) {
+            alert('عذراً، يجبر النظام إدخال الاسم الكامل قبل البدء!');
+            return;
+        }
+        studentName = nameInput;
+        
+        // تجهيز نسخة عشوائية من الأسئلة والخيارات لكل طالب
+        questions = JSON.parse(JSON.stringify(rawQuestions));
+        shuffleArray(questions);
+        questions.forEach(q => {
+            // خربطة الخيارات مع تتبع الإجابة الصحيحة
+            let originalCorrectAnswerText = q.options[q.answer];
+            shuffleArray(q.options);
+            q.answer = q.options.indexOf(originalCorrectAnswerText);
+        });
+
+        currentQuestionIndex = 0;
+        userAnswers = {};
+        showScreen('quiz-screen');
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const q = questions[currentQuestionIndex];
+        document.getElementById('question-counter').innerText = `السؤال ${currentQuestionIndex + 1} من ${questions.length}`;
+        
+        const passageContainer = document.getElementById('passage-container');
+        if (q.passage) {
+            passageContainer.innerHTML = `<div class="reading-passage"><strong>نص القطعة:</strong><br>${q.passage}</div>`;
+            passageContainer.style.display = 'block';
+        } else {
+            passageContainer.innerHTML = '';
+            passageContainer.style.display = 'none';
+        }
+
+        document.getElementById('question-container').innerHTML = `<div class="question-text">${currentQuestionIndex + 1}. ${q.q}</div>`;
+
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        q.options.forEach((opt, idx) => {
+            let li = document.createElement('li');
+            li.innerHTML = opt;
+            if (userAnswers[currentQuestionIndex] === idx) {
+                li.classList.add('selected');
+            }
+            li.onclick = () => selectOption(idx);
+            optionsContainer.appendChild(li);
+        });
+
+        document.getElementById('prev-btn').style.display = currentQuestionIndex === 0 ? 'none' : 'block';
+        document.getElementById('next-btn').innerText = currentQuestionIndex === questions.length - 1 ? 'إنهاء وتسليم الامتحان' : 'السؤال التالي';
+    }
+
+    function selectOption(optionIndex) {
+        userAnswers[currentQuestionIndex] = optionIndex;
+        renderQuestion();
+    }
+
+    function nextQuestion() {
+        if (currentQuestionIndex < questions.length - 1) {
+            currentQuestionIndex++;
+            renderQuestion();
+        } else {
+            finishQuiz();
+        }
+    }
+
+    function prevQuestion() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            renderQuestion();
+        }
+    }
+
+    function finishQuiz() {
+        let score = 0;
+        let feedbackHtml = '';
+
+        questions.forEach((q, idx) => {
+            let userAns = userAnswers[idx];
+            let isCorrect = (userAns === q.answer);
+            if (isCorrect) {
+                score += (100 / questions.length);
+            }
+
+            feedbackHtml += `<div style="margin-bottom: 12px; padding: 8px; border-bottom: 1px solid #ddd; background: ${isCorrect ? '#e8f8f5' : '#f8d7da'}">
+                <strong>السؤال ${idx + 1}:</strong> ${q.q}<br>
+                إجابتك: ${userAns !== undefined ? q.options[userAns] : 'لم تقم بالإجابة'} <br>
+                الإجابة الصحيحة: <span style="color: var(--accent-color); font-weight:bold;">${q.options[q.answer]}</span>
+            </div>`;
+        });
+
+        let finalScoreRounded = Math.round(score);
+        document.getElementById('final-score').innerText = finalScoreRounded;
+        document.getElementById('feedback-container').innerHTML = feedbackHtml;
+
+        // حفظ البيانات في Firebase Realtime Database
+        saveResultToDatabase(studentName, finalScoreRounded);
+
+        showScreen('result-screen');
+    }
+
+    function saveResultToDatabase(name, score) {
+        const timestamp = new Date().toLocaleString('ar-JO');
+        if (typeof database !== 'undefined') {
+            database.ref('exam_results').push({
+                studentName: name,
+                score: score,
+                date: timestamp
+            });
+        } else {
+            // تخزين محلي احتياطي في حال عدم ربط مفاتيح Firebase
+            let localResults = JSON.parse(localStorage.getItem('exam_results') || '[]');
+            localResults.push({ studentName: name, score: score, date: timestamp });
+            localStorage.setItem('exam_results', JSON.stringify(localResults));
+        }
+    }
+
+    function showLoginModal() {
+        showScreen('login-screen');
+    }
+
+    function verifyAdmin() {
+        const pass = document.getElementById('admin-pass').value;
+        if (pass === "MK1978mk") {
+            loadAdminDashboard();
+            showScreen('admin-dashboard');
+        } else {
+            alert('كلمة المرور غير صحيحة!');
+        }
+    }
+
+    function loadAdminDashboard() {
+        const tbody = document.getElementById('results-tbody');
+        tbody.innerHTML = '';
+
+        if (typeof database !== 'undefined') {
+            database.ref('exam_results').once('value', snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    Object.values(data).forEach(row => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${row.studentName}</td><td>${row.score}</td><td>${row.date}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3">لا توجد نتائج مسجلة حتى الآن.</td></tr>`;
+                }
+            });
+        } else {
+            let localResults = JSON.parse(localStorage.getItem('exam_results') || '[]');
+            if (localResults.length > 0) {
+                localResults.forEach(row => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${row.studentName}</td><td>${row.score}</td><td>${row.date}</td>`;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3">لا توجد نتائج مسجلة حتى الآن.</td></tr>`;
+            }
+        }
+    }
+
+    // إجراءات منع الغش والأمان
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    
+    window.addEventListener('blur', () => {
+        const alertBox = document.getElementById('cheating-alert');
+        if(alertBox) {
+            alertBox.style.display = 'block';
+        }
+    });
+</script>
+
+</body>
+</html>
